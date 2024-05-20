@@ -29,7 +29,7 @@ namespace Urysohn
             int i = 0;
             foreach (Univariate uni in _univariateList)
             {
-                uni.Update(inputs[i++], delta / _univariateList.Count, mu);
+                uni.Update(inputs[i++], delta, mu);
             }
         }
 
