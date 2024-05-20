@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -6,14 +6,21 @@ namespace Urysohn
 {
     internal class Spline
     {
-        public double a { get; set; }
-        public double b { get; set; }
-        public double c { get; set; }
-        public double d { get; set; }
+        private double a, b, c, d;
+
+        public double GetValue(double x)
+        {
+            return a + b * x + c * x * x + d * x * x * x;
+        }
+
+        public double GetDerivative(double x)
+        {
+            return b + 2.0 * c * x + 3.0 * d * x * x;
+        }
 
         public Spline(double A, double B, double C, double D)
         {
-            this.a = A; this.b = B; this.c = C; this.d = D; 
+            this.a = A; this.b = B; this.c = C; this.d = D;
         }
     }
 
@@ -26,11 +33,14 @@ namespace Urysohn
             splines.Add(new Spline(A, B, C, D));
         }
 
+        public double GetDerivative(int spline, double relativeDistance)
+        {
+            return splines[spline].GetDerivative(relativeDistance);
+        }
+
         public double GetValue(int spline, double relativeDistance)
         {
-            return splines[spline].a + splines[spline].b * relativeDistance +
-                splines[spline].c * relativeDistance * relativeDistance +
-                splines[spline].d * relativeDistance * relativeDistance * relativeDistance;
+            return splines[spline].GetValue(relativeDistance);
         }
     }
 
@@ -57,6 +67,19 @@ namespace Urysohn
             _ymin = ymin;
             _ymax = ymax;
             Initialize();
+        }
+
+        public double GetDerrivative(double x)
+        {
+            FitDefinition(x);
+            (int k, double relative) = GetSplineAndRelative(x);
+
+            double v = 0.0;
+            for (int i = 0; i < _basisList.Count; i++)
+            {
+                v += _basisList[i].GetDerivative(k, relative) * _coefficients[i] / _deltax;
+            }
+            return v;
         }
 
         private void PopulateBasisFunctions(SplineGenerator sg, double[][] R, double[] h)
@@ -119,7 +142,7 @@ namespace Urysohn
         {
             FitDefinition(x);
 
-            (int k, double relative) = GetSplineAndRelative(x);  
+            (int k, double relative) = GetSplineAndRelative(x);
 
             double v = 0.0;
             for (int i = 0; i < _basisList.Count; i++)
@@ -135,20 +158,14 @@ namespace Urysohn
 
             (int k, double relative) = GetSplineAndRelative(x);
 
-            double[] vectorX = new double[_basisList.Count];
-            for (int i = 0; i < vectorX.Length; i++)
+            for (int i = 0; i < _basisList.Count; i++)
             {
-                vectorX[i] = _basisList[i].GetValue(k, relative);
-            }
-
-            for (int i = 0; i < vectorX.Length; i++)
-            {
-                _coefficients[i] += delta * mu * vectorX[i];
+                _coefficients[i] += delta * mu * _basisList[i].GetValue(k, relative);
             }
         }
 
         private void Initialize()
-        { 
+        {
             SplineGenerator sg = new SplineGenerator();
             double[] h = new double[_points - 1];
             for (int i = 0; i < h.Length; i++)
